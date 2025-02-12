@@ -75,7 +75,7 @@ func deletePizza(c *gin.Context){
 func main(){
 	r:= gin.Default()
 
-	r.use(cors.New(cors.Config{
+	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"},
 		AllowMethods:     []string{"GET","POST","DELETE","OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
