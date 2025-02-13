@@ -10,6 +10,11 @@ in client{
 
     after the commands in the src folder make the folder Pizza
     where you need to make the PizzaCreate.jsx,PizzaEdit.jsx,PizzaList.jsx
+    also make the folder named Header in the src-->Header-->PageHeader.jsx
+
+
+    after all the above change App.jsx and then the main.jsx 
+    and then the index.html(include bootstrap and the main.jsx in the body as script)
 }
 
 in server{
