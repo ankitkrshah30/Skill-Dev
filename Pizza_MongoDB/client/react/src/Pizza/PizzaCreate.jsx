@@ -26,7 +26,7 @@ function PizzaCreate() {
             const createdPizza = response.data.pizza;
             setPizza(createdPizza);
             alert(response.data.message);
-            navigate("/pizzas/list");
+            navigate("/pizzas");
         } catch (error) {
             alert("Server Error");
         }
@@ -35,7 +35,7 @@ function PizzaCreate() {
     return (
         <>
             <PageHeader />
-            <h3><a href="/pizzas/list" className="btn btn-light">Go Back</a>Add Pizza</h3>
+            <h3><a href="/pizzas" className="btn btn-light">Go Back</a>Add Pizza</h3>
             <div className="container">
                 <div className="form-group mb-3">
                     <label htmlFor="name" className="form-label">🍕 Pizza Name:</label>

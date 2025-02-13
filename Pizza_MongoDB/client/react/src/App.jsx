@@ -12,7 +12,7 @@ function App() {
         <Route path="/pizzas" element={<PizzaList />} />
         <Route path="/pizzas/create" element={<PizzaCreate />} />
         <Route path="/pizzas/view/:id" element={<PizzaView />} />
-        <Route path="/pizzas/edit/:id" element={<PizzaEdit />} /> {/* ✅ New Route */}
+        <Route path="/pizzas/edit/:id" element={<PizzaEdit />} />
       </Routes>
     </BrowserRouter>
   );

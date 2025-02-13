@@ -6,14 +6,25 @@ function PizzaList() {
     const [pizzas, setPizzas] = useState([]);
     
     const readAllPizzas = async () => {
-        try {
-            const baseUrl = "http://localhost:8080";
-            const response = await axios.get(`${baseUrl}/pizzas`);
-            setPizzas(response.data);
-        } catch (error) {
-            alert("Server Error: Unable to fetch pizzas");
+    try {
+        const baseUrl = "http://localhost:8080";
+        const response = await axios.get(`${baseUrl}/pizzas`);
+        
+        console.log("API Response:", response.data); // ✅ Debugging step
+        
+        if (Array.isArray(response.data)) {
+            setPizzas(response.data); // ✅ Ensure response is an array
+        } else {
+            console.error("Invalid API response format:", response.data);
+            setPizzas([]); // Fallback to empty array
         }
-    };
+    } catch (error) {
+        console.error("Server Error: Unable to fetch pizzas", error);
+        alert("Server Error: Unable to fetch pizzas");
+        setPizzas([]); // Fallback to empty array
+    }
+};
+
     
     const deletePizza = async (id) => {
         if (!confirm("Are you sure to delete this pizza?")) {

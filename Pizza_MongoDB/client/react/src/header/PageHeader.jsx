@@ -12,10 +12,10 @@ function PageHeader({PageNumber}) {
                     <div className="collapse navbar-collapse" id="navbarSupportedContent">
                         <ul className="navbar-nav me-auto mb-2 mb-lg-0">
                             <li className="nav-item">
-                            <a className={PageNumber==1?"nav-link active":"nav-link"} href="/pizzas/list">Pizza List</a>
+                            <a className={"nav-link active"} href="/pizzas">Pizza List</a>
                             </li>
                             <li className="nav-item">
-                                <a className={PageNumber==2?"nav-link active":"nav-link"} href="/pizzas/create">Add Pizza</a>
+                                <a className={"nav-link"} href="/pizzas/create">Add Pizza</a>
                             </li>
                         </ul>
                     </div>
