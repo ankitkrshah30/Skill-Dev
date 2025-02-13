@@ -1,0 +1,24 @@
+make a project folder->server->client
+in client{
+    make a react folder by the following commands
+    npm create vite@latest --latest react
+    npm install
+    npm run dev
+
+
+    after the commands in the src folder make the folder Pizza
+    where you need to make the PizzaCreate.jsx,PizzaEdit.jsx,PizzaList.jsx
+}
+
+in server{
+    to crete go.mod and go.sum run the commands
+    go mod init test.com/suman-apis
+    go mod tidy
+    go get github.com/gin-gonic/gin
+    go get github.com/gin-contrib/cors
+    go get go.mongodb.org/mongo-driver/mongo
+    go get go.mongodb.org/mongo-driver/bson
+    go get go.mongodb.org/mongo-driver/mongo/options
+    go get go.mongodb.org/mongo-driver/bson/primitive
+    write codes in the main.go
+}
