@@ -35,7 +35,7 @@ function PizzaEdit() {
             });
             setPizza(response.data.pizza);
             alert(response.data.message);
-            navigate("/pizzas/list");
+            navigate("/pizzas");
         } catch (error) {
             alert("Server Error: Unable to update pizza details");
         }

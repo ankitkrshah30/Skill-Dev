@@ -3,6 +3,8 @@ in client{
     make a react folder by the following commands
     npm create vite@latest --latest react
     npm install
+    npm install react-router-dom
+    npm install axios
     npm run dev
 
 
