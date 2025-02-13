@@ -50,20 +50,28 @@ func readPizzaById(c *gin.Context){
 }
 
 
-func updatePizza(c *gin.Context){
-	id:= c.Param("id")
+func updatePizza(c *gin.Context) {
+	id := c.Param("id")
 	var jbodyPizza Pizza 
-	err := c.BindJSON(&jbodyPizza)
-	if err != nil{
-		c.JSON(http.StatusInternalServerError,
-			gin.H{"error": "Server Error. " + err.Error()})
-	   return
+	if err := c.BindJSON(&jbodyPizza); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Server Error. " + err.Error()})
+		return
 	}
-	updatedPizza := Pizza{Id: id,Name: "Papperoni Pizza",Size: 16, Price: 500.0,Category: "Fast Delivery"}
+	
+	updatedPizza := Pizza{
+		Id:       id,
+		Name:     jbodyPizza.Name,
+		Size:     jbodyPizza.Size,
+		Price:    jbodyPizza.Price,
+		Category: jbodyPizza.Category,
+	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Pizza Updated Successfully",
-		"pizza": updatedPizza})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Pizza Updated Successfully",
+		"pizza":   updatedPizza,
+	})
 }
+
 
 
 func deletePizza(c *gin.Context){
