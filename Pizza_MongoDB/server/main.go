@@ -1,104 +1,194 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-
+	"github.com/gin-contrib/cors"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Config
+var mongoUri string = "mongodb://localhost:27017"
+var mongoDbName string = "pizza_app_db"
+var mongoCollectionPizza string = "pizzas"
+
+// Database variables
+var mongoclient *mongo.Client
+var pizzaCollection *mongo.Collection
+
+// Pizza model
 type Pizza struct {
-	Id       string  `json:"id,omitempty"`
-	Name     string  `json:"pizza_name"`
-	Size     int     `json:"size"`
-	Price    float64 `json:"price"`
-	Category string  `json:"category"`
+	ID       primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Name     string             `json:"pizza_name" bson:"pizza_name"`
+	Size     int                `json:"size" bson:"size"`
+	Price    float64            `json:"price" bson:"price"`
+	Category string             `json:"category" bson:"category"`
 }
 
+// Connect to MongoDB
+func connectDB() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-func createPizza(c *gin.Context){
+	var err error
+	mongoclient, err = mongo.Connect(ctx, options.Client().ApplyURI(mongoUri))
+	if err != nil {
+		log.Fatal("MongoDB Connection Error:", err)
+	}
+
+	pizzaCollection = mongoclient.Database(mongoDbName).Collection(mongoCollectionPizza)
+	fmt.Println("Connected to MongoDB!")
+}
+
+// Create a new pizza
+func createPizza(c *gin.Context) {
 	var jbodyPizza Pizza
-
 	if err := c.BindJSON(&jbodyPizza); err != nil {
-		c.JSON(http.StatusInternalServerError,
-		     gin.H{"error": "Server Error. " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	createdPizza :=   Pizza{Id: "001",Name: "Papperoni Pizza",Size: 16, Price: 500.0,Category: "Fast Delivery"}
-	c.JSON(http.StatusCreated,
-		gin.H{"message": "Pizza Created Succesfully" ,
-			"pizza" : createdPizza})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := pizzaCollection.InsertOne(ctx, jbodyPizza)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create pizza"})
+		return
+	}
+
+	pizzaId, _ := result.InsertedID.(primitive.ObjectID)
+	jbodyPizza.ID = pizzaId
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Pizza created successfully", "pizza": jbodyPizza})
 }
 
-func readAllPizzas(c *gin.Context){
+// Read all pizzas
+func readAllPizzas(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	pizzas := []Pizza{{Id: "001",Name: "Papperoni Pizza",Size: 16, Price: 500.0,Category: "Fast Delivery"},
-		{Id: "002",Name: "Sizzling Pizza",Size: 18, Price: 55.0,Category: "Super fast Delivery"}}
+	cursor, err := pizzaCollection.Find(ctx, bson.M{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch pizzas"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var pizzas []Pizza
+	if err := cursor.All(ctx, &pizzas); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse pizzas"})
+		return
+	}
 
 	c.JSON(http.StatusOK, pizzas)
 }
 
-func readPizzaById(c *gin.Context){
+// Read pizza by ID
+func readPizzaById(c *gin.Context) {
 	id := c.Param("id")
-	pizza := Pizza{Id: id,Name: "Papperoni Pizza",Size: 16, Price: 500.0,Category: "Fast Delivery"} 
-	c.JSON(http.StatusOK, pizza)
-
-}
-
-
-func updatePizza(c *gin.Context) {
-	id := c.Param("id")
-	var jbodyPizza Pizza 
-	if err := c.BindJSON(&jbodyPizza); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Server Error. " + err.Error()})
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
-	
-	updatedPizza := Pizza{
-		Id:       id,
-		Name:     jbodyPizza.Name,
-		Size:     jbodyPizza.Size,
-		Price:    jbodyPizza.Price,
-		Category: jbodyPizza.Category,
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var pizza Pizza
+	err = pizzaCollection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&pizza)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Pizza not found"})
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Pizza Updated Successfully",
-		"pizza":   updatedPizza,
-	})
+	c.JSON(http.StatusOK, pizza)
 }
 
+// Update pizza
+func updatePizza(c *gin.Context) {
+	id := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
 
+	var jbodyPizza Pizza
+	if err := c.BindJSON(&jbodyPizza); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-func deletePizza(c *gin.Context){
-	id:= c.Param("id")
-	fmt.Println(id)
-	c.JSON(http.StatusOK,gin.H{"message": "Flight Deleted successfully. "})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := pizzaCollection.UpdateOne(ctx, bson.M{"_id": objectID}, bson.M{"$set": jbodyPizza})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update pizza"})
+		return
+	}
+
+	if result.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Pizza not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Pizza updated successfully"})
 }
 
-func main(){
-	r:= gin.Default()
+// Delete pizza
+func deletePizza(c *gin.Context) {
+	id := c.Param("id")
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := pizzaCollection.DeleteOne(ctx, bson.M{"_id": objectID})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete pizza"})
+		return
+	}
+
+	if result.DeletedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Pizza not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Pizza deleted successfully"})
+}
+
+func main() {
+	connectDB()
+	r := gin.Default()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"},
-		AllowMethods:     []string{"GET","POST","DELETE","OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Lenght"},
+		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
 
-	r.POST("/pizzas",createPizza)
-	r.GET("/pizzas" , readAllPizzas)
-	r.GET("/pizzas/:id",  readPizzaById)
-	r.PUT("/pizzas/:id",  updatePizza)
-	r.DELETE("/pizzas/:id",  deletePizza)
+	r.POST("/pizzas", createPizza)
+	r.GET("/pizzas", readAllPizzas)
+	r.GET("/pizzas/:id", readPizzaById)
+	r.PUT("/pizzas/:id", updatePizza)
+	r.DELETE("/pizzas/:id", deletePizza)
 
-	r.Run()
+	r.Run(":8080")
 }
-
-
